@@ -579,10 +579,17 @@ void start_active_point(Settings &sett, CalculatedData &cdata)
     WiFi.scanNetworks(true);
 
     uint16_t start = millis();
+    uint32_t last_heap_log = 0;
     while (!exit_portal_flag && ((millis() - start) / 1000) < SETUP_TIME_SEC)
     {
         dns->processNextRequest();
         yield();
+
+        if (millis() - last_heap_log > 5000)
+        {
+            last_heap_log = millis();
+            LOG_INFO(F("PORTAL HEAP: free=") << ESP.getFreeHeap() << F(" frag=") << ESP.getHeapFragmentation() << F("% max_block=") << ESP.getMaxFreeBlockSize());
+        }
 
         if (start_connect_flag)
         {

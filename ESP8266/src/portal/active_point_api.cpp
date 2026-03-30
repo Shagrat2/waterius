@@ -26,6 +26,7 @@ static JsonDocument g_json_doc;
 
 inline void send_json_response(AsyncWebServerRequest *request, JsonDocument &json_doc)
 {
+    LOG_INFO(F("HEAP before response: free=") << ESP.getFreeHeap() << F(" frag=") << ESP.getHeapFragmentation() << F("%"));
     AsyncResponseStream *response = request->beginResponseStream("application/json");
     if (response)
     {
@@ -34,8 +35,10 @@ inline void send_json_response(AsyncWebServerRequest *request, JsonDocument &jso
     }
     else
     {
+        LOG_ERROR(F("HEAP: beginResponseStream returned NULL! free=") << ESP.getFreeHeap());
         request->send(503);
     }
+    LOG_INFO(F("HEAP after response: free=") << ESP.getFreeHeap() << F(" frag=") << ESP.getHeapFragmentation() << F("%"));
 }
 
 #define IMPULS_LIMIT_1 3 // Если пришло импульсов меньше 3, то перед нами 10л/имп. Если больше, то 1л/имп.
@@ -204,7 +207,7 @@ void get_api_start_connect(AsyncWebServerRequest *request)
  */
 void get_api_main_status(AsyncWebServerRequest *request)
 {
-    LOG_INFO(F("GET ") << request->url());
+    LOG_INFO(F("GET ") << request->url() << F(" heap=") << ESP.getFreeHeap() << F(" frag=") << ESP.getHeapFragmentation() << F("%"));
 
     g_json_doc.clear();
     JsonArray array = g_json_doc.to<JsonArray>();
@@ -264,7 +267,7 @@ void get_api_status_1(AsyncWebServerRequest *request)
  */
 void get_api_status(AsyncWebServerRequest *request, const int index)
 {
-    LOG_INFO(F("GET ") << request->url());
+    LOG_INFO(F("GET ") << request->url() << F(" heap=") << ESP.getFreeHeap() << F(" frag=") << ESP.getHeapFragmentation() << F("%"));
 
     g_json_doc.clear();
     JsonObject ret = g_json_doc.to<JsonObject>();

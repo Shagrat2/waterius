@@ -322,9 +322,40 @@ function showPW(id){
     pw.type == 'password' ? pw.type = 'text' : pw.type = 'password';
 }
 
+var _pollPending = false;
+var _pollAbortCtrl = null;
+var _pollAbortTimer = null;
+
+function _pollRequest(url, callback) {
+    if (_pollPending) return;
+    _pollPending = true;
+    _pollAbortCtrl = new AbortController();
+    fetch(url, {signal: _pollAbortCtrl.signal})
+        .then(res => res.ok ? res.json() : Promise.reject(res))
+        .then(data => {
+            _pollCleanup();
+            callback(data);
+        })
+        .catch(() => {
+            _pollCleanup();
+        });
+    _pollAbortTimer = setTimeout(() => {
+        if (_pollPending && _pollAbortCtrl) {
+            _pollAbortCtrl.abort();
+            _pollCleanup();
+        }
+    }, 3000);
+}
+
+function _pollCleanup() {
+    if (_pollAbortTimer) { clearTimeout(_pollAbortTimer); _pollAbortTimer = null; }
+    _pollPending = false;
+    _pollAbortCtrl = null;
+}
+
 function getWiFiStatus() {
     setTimeout(() => {
-        ajax('/api/connect_status', {}, data => {
+        _pollRequest('/api/connect_status', data => {
             if(data.redirect) {
                 if (data.params) {
                     return window.location = queryParams.wizard ? data.redirect + '?wizard=true&' + data.params : data.redirect + "?" + data.params;
@@ -332,36 +363,36 @@ function getWiFiStatus() {
                     return window.location = queryParams.wizard ? data.redirect + '?wizard=true' : data.redirect;
                 }
             }
-            getWiFiStatus();
-        }, false);
+        });
+        getWiFiStatus();
     }, 2000);
 }
 function getStatus(i, next) {
     setTimeout(() => {
-        ajax('/api/status/' + i, {}, data => {
+        _pollRequest('/api/status/' + i, data => {
             if(data.state == 1)
                 return window.location = (queryParams.wizard ? next + '?wizard=true': next);
             formError(data.error);
-            getStatus(i, next);
-        }, false);
+        });
+        getStatus(i, next);
     }, 2000);
 }
 function getImpulses(i) {
     setTimeout(() => {
-        ajax('/api/status/' + i, {}, data => {
+        _pollRequest('/api/status/' + i, data => {
             document.getElementById('impulses').textContent = data.impulses;
             formError(data.error);
-            getImpulses(i);
-        }, false);
+        });
+        getImpulses(i);
     }, 2000);
 }
 function getImpulsesHall(i) {
     setTimeout(() => {
-        ajax('/api/status/' + i, {}, data => {
+        _pollRequest('/api/status/' + i, data => {
             document.getElementById('impulses').textContent = data.impulses;
             formError(data.error);
-            getImpulsesHall(i);
-        }, false);
+        });
+        getImpulsesHall(i);
     }, 2000);
 }
 function finish(btn){
